@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "Youtube mini backend project",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "enodemon src/index.js"
   },
   "author": "Trisha Mondal",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
 }

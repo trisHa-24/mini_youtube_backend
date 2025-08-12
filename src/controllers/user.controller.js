@@ -18,7 +18,7 @@ let generateAccessTokenAndRefreshToken = async (user) => {
 
     user.refreshToken = refreshToken;
     await user.save();
-
+       
     return { accessToken, refreshToken };
 }
 
@@ -187,7 +187,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         incomingRefreshToken,
         process.env.REFRESH_TOKEN_SECRET
     )
-
+    
     const user = await User.findById(decodedRefreshToken?._id)
 
     if(!user){
@@ -198,12 +198,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "refresh token expired or used")
     }
     
-    const {newAccessToken, newRefreshToken} = await generateAccessTokenAndRefreshToken(user)
+    const {accessToken: newAccessToken, refreshToken: newRefreshToken} = await generateAccessTokenAndRefreshToken(user)  
 
     return res
     .status(200)
     .cookie("accessToken", newAccessToken, options)
-    .cookie("refreshToken", newRefreshToken, options)
+    .cookie("refreshToken", newAccessToken, options)
     .json(
         new ApiResponse(
             200,

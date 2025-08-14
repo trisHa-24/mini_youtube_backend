@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
 
+// TODO : controller for deleting user account
 
 const options = {
         httpOnly: true,
@@ -299,11 +300,13 @@ const updateAccountDetails = asyncHandler( async (req, res) =>{
 
 const updateUserAvatar = asyncHandler(async (req, res) =>{
     const avatarLocalPath = await req.file?.path;
+   
 
     if(!avatarLocalPath){
         throw new ApiError(400, "Avatar file is required");
     }
     const avatar = await uploadOnCloudinary(avatarLocalPath);
+    
 
     if(!avatar.url){
         throw new ApiError(500, "Error on uploading avatar")
@@ -316,7 +319,7 @@ const updateUserAvatar = asyncHandler(async (req, res) =>{
                 avatar: avatar.url
             }
         },
-        {validateBeforeSave: true}
+        {new: true}
     ).select("-password -refreshToken");
 
     if(!user){
@@ -353,7 +356,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) =>{
                 coverImage: coverImage.url
             }
         },
-        {validateBeforeSave: true}
+        {new: true}
     ).select("-password -refreshToken");
 
     if(!user){

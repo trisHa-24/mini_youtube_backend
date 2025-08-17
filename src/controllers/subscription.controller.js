@@ -76,6 +76,148 @@ const toggleSubscription = asyncHandler( async (req, res) => {
 
 })
 
+const getUserChannelSubscribers = asyncHandler( async (req, res) => {
+    // get userId 
+    // check if userId is valid or not and eist or not
+    // get all subscriber of that userId
+    // return all subscriber
+    const {channelId} = req.params
+
+    if(!isValidObjectId(channelId)){
+        throw new ApiError(400, "Invalid channelId")
+    }
+
+    const channel = await User.findById(channelId)
+
+    if(!channel){
+        throw new ApiError(404, "channel doesn't exist")
+    }
+
+    const subscribers = await Subscription.aggregate([
+        {
+            $match: {
+                channel: channel?._id
+            }
+        },
+        {
+             $lookup: {
+                from: "users",
+                localField: "subscriber",
+                foreignField: "_id",
+                as: "subscribers"
+            }
+        },
+        { $unwind: "$subscribers" }, 
+        {
+            $project:{
+                _id: 0,
+                subscriberId: "$subscribers._id",
+                username: "$subscribers.username",
+                fullName: "$subscribers.fullName",
+                avatar: "$subscribers.avatar",
+            }
+        }
+    ])
+
+
+    if(!subscribers || subscribers.length === 0){
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    subscribers
+                },
+                "No subscribers found"
+            )
+        )
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                subscribers
+            },
+            "Subscribers fetched successfully"
+        )
+    )
+ 
+})
+
+// controller to return channel list to which user has subscribed
+const getSubscribedChannels = asyncHandler(async (req, res) => {
+
+    const { subscriberId } = req.params
+
+    if(!isValidObjectId(subscriberId)){
+        throw new ApiError(400, "Invalid subscriberId")
+    }
+    const subscriber = await User.findById(subscriberId)
+
+    if(!subscriber){
+        throw new ApiError(404, "User does not exist")
+    }
+
+    const channelsSubscribedTo = await Subscription.aggregate([
+        {
+            $match: {
+                subscriber: subscriber?._id
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "channel",
+                foreignField: "_id",
+                as: "subscribedChannels"
+            }
+        },
+        { $unwind: "$subscribedChannels" }, 
+        {
+            $project: {
+                _id: 0,
+                channelId: "$subscribedChannels._id",
+                username: "$subscribedChannels.username",
+                fullName: "$subscribedChannels.fullName",
+                avatar: "$subscribedChannels.avatar",
+                coverImage: "$subscribedChannels.coverImage"
+            }
+        }
+        
+    ])
+
+    if(!channelsSubscribedTo || channelsSubscribedTo.length === 0){
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                {},
+                "No channels Subscribed"
+            )
+        )
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                subscribedChannels: channelsSubscribedTo
+            },
+            "Subscribed channels fetched successfully"
+        )
+    )
+
+})
+
 export {
-    toggleSubscription
+    toggleSubscription,
+    getUserChannelSubscribers,
+    getSubscribedChannels
 }

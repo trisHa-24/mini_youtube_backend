@@ -90,29 +90,53 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid video id")
     }
 
-    const video = await Video.findById(videoId).populate('owner', 'username avatar');
+    let video = await Video.findById(videoId);
 
     if(!video){
         throw new ApiError(404, "Video not found")
     }
+    
+    if(video.owner.toString() !== req.user._id.toString()){
 
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            {
-                video
-            },
-            "Video fetched successfully"
-        )
+        // check watch history and update views count
+         const user = await User.findById(req.user._id)
+    
+        if(user && !user.watchHistory.includes(videoId)){
+           user.watchHistory.push(video._id)
+           await user.save();
+           video = await Video.findByIdAndUpdate(
+            videoId, 
+            { $inc: { views: 1 } },
+            { new: true }
+           );
+        }
+    }
+
+    await video.populate("owner", "username avatar")    
+
+    return res.status(200).json(
+    new ApiResponse(
+        200,
+        {
+            video: {
+                _id: video._id,
+                title: video.title,
+                description: video.description,
+                views: video.views,
+                duration: video.duration,
+                videoUrl: video.videoFile.url,
+                thumbnailUrl: video.thumbnail.url,
+                owner: video.owner,  
+                createdAt: video.createdAt
+            }
+        },
+        "Video fetched successfully"
     )
+);
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
     
-
 })
 
 export {

@@ -136,11 +136,79 @@ const getVideoById = asyncHandler(async (req, res) => {
 })
 
 const updateVideo = asyncHandler(async (req, res) => {
+    const {videoId} = req.params
+    const {title, description} = req.body
+    const thumbnailLocalPath = await req.file?.path
+    console.log(thumbnailLocalPath);
     
+    if([title,description].some((field) => field.trim() === "")){
+        throw new ApiError(400, "Name and Description required")
+    }
+
+    if(!thumbnailLocalPath){
+        throw new ApiError(400, "Thumbnail is required")
+    }
+
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400, "Invalid Video Id")
+    }
+
+    const video = await Video.findById(videoId)
+
+    if(!video){
+        throw new ApiError(404, "Video does not exist")
+    }
+
+    if(video.owner.toString() !== req.user?._id.toString()){
+        throw new ApiError(403, "You are not authorized to update this video")
+    }
+
+    const uploadThumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+    
+    if(!uploadThumbnail){
+        throw new ApiError(500, "Error on uploading avatar")
+    }
+
+    const updatedVideoDetails = await Video.findByIdAndUpdate(
+        videoId,
+        { 
+            $set: {
+                title,
+                description,
+                thumbnail: {
+                    url: uploadThumbnail.url,
+                    public_id: uploadThumbnail.public_id
+                }
+            }
+        },
+        {new: true}
+    )
+
+    if(!updatedVideoDetails){
+        throw new ApiError(500, "Something went wrong while updating")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {
+                videoId: updatedVideoDetails._id,
+                title: updatedVideoDetails.title,
+                description: updatedVideoDetails.description,
+                thumbnail: updatedVideoDetails.thumbnail.url
+            }
+        ),
+        "Video updated successfully"
+    )
 })
+
+
 
 export {
     getAllVideos,
     publishVideo,
-    getVideoById
+    getVideoById,
+    updateVideo
 }
